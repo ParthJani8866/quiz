@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/QuizFlow.Api/QuizFlow.Api.csproj" />
+    <Project Path="src/backend/QuizFlow.Application/QuizFlow.Application.csproj" />
+    <Project Path="src/backend/QuizFlow.Domain/QuizFlow.Domain.csproj" />
+    <Project Path="src/backend/QuizFlow.Infrastructure/QuizFlow.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QuizFlow.UnitTests/QuizFlow.UnitTests.csproj" />
+  </Folder>
+</Solution>

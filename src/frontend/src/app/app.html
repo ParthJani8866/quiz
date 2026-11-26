@@ -1,0 +1,65 @@
+<main class="page-shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="QuizFlow home"><span class="brand-mark">Q</span> QuizFlow</a>
+    <span class="topbar-note">Interactive moments. Better learning.</span>
+  </header>
+
+  <section class="auth-layout" aria-labelledby="welcome-title">
+    <div class="story-panel">
+      <div class="eyebrow"><span class="live-dot"></span> BUILT FOR EVERY ROOM</div>
+      <h1>Make every voice<br /><span>part of the moment.</span></h1>
+      <p>Bring quizzes, polls, and conversations together in one simple space for your audience.</p>
+      <div class="preview-card" aria-label="QuizFlow live poll preview">
+        <div class="preview-head"><span class="preview-icon">✦</span><span>LIVE POLL</span><span class="preview-live">● LIVE</span></div>
+        <h2>What helps you learn best?</h2>
+        <div class="poll-row"><span>Trying it yourself</span><span>58%</span><i style="--progress: 58%"></i></div>
+        <div class="poll-row"><span>Discussing together</span><span>27%</span><i style="--progress: 27%"></i></div>
+        <div class="poll-row"><span>Seeing an example</span><span>15%</span><i style="--progress: 15%"></i></div>
+        <div class="participant-note"><span class="avatars">● ● ●</span> Your audience, in real time</div>
+      </div>
+      <div class="trust-row"><span>✦</span> Made for classrooms, teams, and events</div>
+    </div>
+
+    <div class="form-panel">
+      <div class="form-card">
+        <div class="mobile-mark"><span class="brand-mark">Q</span></div>
+        <p class="form-kicker">{{ isRegistering() ? 'GET STARTED FOR FREE' : isResetting() ? 'ACCOUNT SECURITY' : isVerifying() ? 'EMAIL VERIFICATION' : 'WELCOME BACK' }}</p>
+        <h2 id="welcome-title">{{ isRegistering() ? 'Create your account' : isResetting() ? 'Choose a new password' : isVerifying() ? 'Verify your email' : 'Sign in to QuizFlow' }}</h2>
+        <p class="form-subtitle">{{ isRegistering() ? 'Start creating more engaging experiences.' : isResetting() ? 'Choose a strong password you have not used before.' : isVerifying() ? 'We are checking your verification link.' : 'Your next great session is waiting.' }}</p>
+
+        @if (!isRegistering() && !isResetting() && !isVerifying()) { <button type="button" class="google-button" (click)="auth.signInWithGoogle()">
+          <span class="google-g" aria-hidden="true">G</span> Continue with Google
+        </button> }
+        @if (!isVerifying()) { <div class="divider"><span>{{ isRegistering() ? 'or sign up with email' : 'or continue with email' }}</span></div> }
+
+        @if (!isVerifying()) { <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          @if (isRegistering() && !isResetting()) {
+            <div class="name-row">
+              <label>First name<input type="text" formControlName="firstName" autocomplete="given-name" placeholder="Jordan" /></label>
+              <label>Last name<input type="text" formControlName="lastName" autocomplete="family-name" placeholder="Lee" /></label>
+            </div>
+          }
+          <label>Email address<input type="email" formControlName="email" autocomplete="email" placeholder="you@example.com" [readonly]="isResetting()" /></label>
+          <label>Password<input type="password" formControlName="password" [attr.autocomplete]="isRegistering() ? 'new-password' : 'current-password'" placeholder="At least 12 characters" /></label>
+          @if (isRegistering() && !isResetting()) {
+            <label>Confirm password<input type="password" formControlName="confirmPassword" autocomplete="new-password" placeholder="Enter your password again" /></label>
+            <p class="password-hint">Use at least 12 characters with uppercase, lowercase, a number, and a symbol.</p>
+          }
+          @if (error()) { <p class="alert error" role="alert">{{ error() }}</p> }
+          @if (notice()) { <p class="alert success" role="status">{{ notice() }}</p> }
+          <button class="submit-button" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Please wait…' : (isRegistering() ? 'Create account' : 'Sign in') }} <span aria-hidden="true">→</span>
+          </button>
+        </form> }
+
+        @if (!isRegistering() && !isResetting() && !isVerifying()) { <button class="text-link forgot-link" type="button" (click)="forgotPassword()">Forgot password?</button> }
+        @if (!isResetting() && !isVerifying()) { <p class="switch-mode">{{ isRegistering() ? 'Already have an account?' : 'New to QuizFlow?' }}
+          <button class="text-link" type="button" (click)="setMode(!isRegistering())">{{ isRegistering() ? 'Sign in' : 'Create an account' }}</button>
+        </p> }
+        <p class="terms">By continuing, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
+      </div>
+    </div>
+  </section>
+  <footer class="footer"><span>© 2026 QuizFlow</span><a href="/help">Help center</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
+</main>
+<router-outlet />

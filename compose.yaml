@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: quizflow
+      POSTGRES_USER: quizflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before starting PostgreSQL}
+    ports:
+      - "5432:5432"
+    volumes:
+      - quizflow-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quizflow -d quizflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  quizflow-postgres:
