@@ -12,6 +12,11 @@ export class AuthService {
   private readonly endpoint = '/api/v1/auth';
   readonly accessToken = signal<string | null>(null);
 
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.endpoint}/logout`, {}, { withCredentials: true })
+      .pipe(tap(() => this.accessToken.set(null)));
+  }
+
   constructor(private readonly http: HttpClient) {}
 
   login(email: string, password: string): Observable<AuthTokens> {
@@ -55,8 +60,4 @@ export class AuthService {
     return this.http.post<void>(`${this.endpoint}/reset-password`, { email, token, newPassword });
   }
 
-  logout(): Observable<void> {
-    return this.http.post<void>(`${this.endpoint}/logout`, {}, { withCredentials: true })
-      .pipe(tap(() => this.accessToken.set(null)));
-  }
 }

@@ -1,15 +1,15 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
-import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
+import { QuizLibraryComponent } from './features/quiz-library/quiz-library.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ReactiveFormsModule],
+  imports: [ReactiveFormsModule, QuizLibraryComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -18,6 +18,7 @@ export class App {
   private readonly platformId = inject(PLATFORM_ID);
   readonly auth = inject(AuthService);
   readonly title = 'QuizFlow';
+  readonly workspace = signal(false);
   readonly isRegistering = signal(false);
   readonly isResetting = signal(false);
   readonly isVerifying = signal(false);
@@ -34,6 +35,13 @@ export class App {
 
   constructor() {
     if (!isPlatformBrowser(this.platformId)) return;
+    this.workspace.set(window.location.pathname.startsWith('/app'));
+    effect(() => {
+      if (this.auth.accessToken()) {
+        this.workspace.set(true);
+        if (!window.location.pathname.startsWith('/app')) window.history.replaceState({}, '', '/app/quizzes');
+      }
+    });
     this.auth.listenForGoogleLogin();
     const url = new URL(window.location.href);
     if (url.pathname.endsWith('/verify-email')) {
@@ -47,7 +55,7 @@ export class App {
     } else if (url.pathname.endsWith('/reset-password')) {
       this.isResetting.set(true);
       this.form.patchValue({ email: url.searchParams.get('email') ?? '' });
-    } else {
+    } else if (!this.workspace()) {
       this.auth.refresh().subscribe({ error: () => undefined });
     }
   }
@@ -89,7 +97,13 @@ export class App {
         ? this.auth.register({ email, password, firstName, lastName, confirmPassword })
         : this.auth.login(email, password);
     request.pipe(finalize(() => this.busy.set(false))).subscribe({
-      next: () => this.notice.set(this.isResetting() ? 'Password updated. You can sign in now.' : this.isRegistering() ? 'Account created. Check your inbox to verify your email.' : 'Signed in successfully.'),
+      next: () => {
+        this.notice.set(this.isResetting() ? 'Password updated. You can sign in now.' : this.isRegistering() ? 'Account created. Check your inbox to verify your email.' : 'Signed in successfully.');
+        if (!this.isResetting() && !this.isRegistering()) {
+          this.workspace.set(true);
+          window.history.replaceState({}, '', '/app/quizzes');
+        }
+      },
       error: (response: HttpErrorResponse) => this.error.set(response.error?.message ?? response.error?.errors?.join(' ') ?? 'We could not complete that request. Check your details and try again.')
     });
   }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using QuizFlow.Api.Services;
+using QuizFlow.Domain.Organizations;
 using QuizFlow.Infrastructure.Identity;
 using QuizFlow.Infrastructure.Persistence;
 
@@ -48,6 +49,7 @@ public sealed class AuthController(
             FirstName = request.FirstName.Trim(), LastName = request.LastName.Trim() };
         var result = await users.CreateAsync(user, request.Password);
         if (!result.Succeeded) return BadRequest(new { errors = result.Errors.Select(error => error.Description) });
+        await EnsurePersonalOrganizationAsync(user, HttpContext.RequestAborted);
         var token = await users.GenerateEmailConfirmationTokenAsync(user);
         var link = BuildAccountLink("verify-email", user.Email!, token);
         await emailSender.SendAsync(user.Email!, "Verify your QuizFlow email", $"<p>Confirm your email by <a href=\"{link}\">verifying your account</a>.</p>", HttpContext.RequestAborted);
@@ -63,6 +65,7 @@ public sealed class AuthController(
         if (user is null || !await users.IsEmailConfirmedAsync(user) ||
             !(await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded)
             return Unauthorized(new { message = "Invalid credentials or unverified account." });
+        await EnsurePersonalOrganizationAsync(user, HttpContext.RequestAborted);
         return Ok(await IssueTokensAsync(user));
     }
 
@@ -325,6 +328,7 @@ public sealed class AuthController(
             var linked = await users.AddLoginAsync(user, new UserLoginInfo("Google", subject, "Google"));
             if (!linked.Succeeded) return BadRequest(new { errors = linked.Errors.Select(error => error.Description) });
         }
+        await EnsurePersonalOrganizationAsync(user, HttpContext.RequestAborted);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         var result = await IssueTokensAsync(user);
         var publicUrl = configuration["App:PublicUrl"] ?? throw new InvalidOperationException("App:PublicUrl must be configured.");
@@ -346,6 +350,24 @@ public sealed class AuthController(
         await db.SaveChangesAsync();
         SetRefreshCookie(raw, DateTimeOffset.UtcNow.AddDays(30));
         return new TokenResponse(access, expires);
+    }
+
+    private async Task EnsurePersonalOrganizationAsync(AppUser user, CancellationToken cancellationToken)
+    {
+        if (await db.OrganizationMemberships.AnyAsync(membership => membership.UserId == user.Id && membership.DeletedAtUtc == null, cancellationToken)) return;
+        var displayName = string.Join(' ', new[] { user.FirstName, user.LastName }.Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+        if (displayName.Length == 0) displayName = user.Email?.Split('@')[0] ?? "My";
+        var slugBase = new string(displayName.ToLowerInvariant().Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray()).Trim('-');
+        if (slugBase.Length > 70) slugBase = slugBase[..70].TrimEnd('-');
+        var organization = new Organization { Name = $"{displayName}'s workspace", Slug = $"{(slugBase.Length == 0 ? "workspace" : slugBase)}-{Guid.NewGuid():N}" };
+        db.Organizations.Add(organization);
+        db.OrganizationMemberships.Add(new OrganizationMembership
+        {
+            Organization = organization,
+            UserId = user.Id,
+            Role = OrganizationRole.Owner
+        });
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private void SetRefreshCookie(string raw, DateTimeOffset expiresAt) => Response.Cookies.Append("QuizFlow.Refresh", raw,

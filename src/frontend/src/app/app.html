@@ -1,4 +1,4 @@
-<main class="page-shell">
+@if (workspace()) { <app-quiz-library /> } @else { <main class="page-shell">
   <header class="topbar">
     <a class="brand" href="/" aria-label="QuizFlow home"><span class="brand-mark">Q</span> QuizFlow</a>
     <span class="topbar-note">Interactive moments. Better learning.</span>
@@ -61,5 +61,4 @@
     </div>
   </section>
   <footer class="footer"><span>© 2026 QuizFlow</span><a href="/help">Help center</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
-</main>
-<router-outlet />
+</main> }
